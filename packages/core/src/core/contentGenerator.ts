@@ -104,8 +104,12 @@ export async function createContentGenerator(
 ): Promise<ContentGenerator> {
   const version = process.env['CLI_VERSION'] || process.version;
   const userAgent = `GeminiCLI/${version} (${process.platform}; ${process.arch})`;
+  const customHeaders = parseCustomHeaders(
+    process.env['GEMINI_CLI_CUSTOM_HEADERS'],
+  );
   const baseHeaders: Record<string, string> = {
     'User-Agent': userAgent,
+    ...customHeaders,
   };
 
   if (
@@ -149,4 +153,35 @@ export async function createContentGenerator(
   throw new Error(
     `Error creating contentGenerator: Unsupported authType: ${config.authType}`,
   );
+}
+
+function parseCustomHeaders(
+  envValue: string | undefined,
+): Record<string, string> {
+  const headers: Record<string, string> = {};
+  if (!envValue) {
+    return headers;
+  }
+
+  for (const entry of envValue.split(',')) {
+    const trimmedEntry = entry.trim();
+    if (!trimmedEntry) {
+      continue;
+    }
+
+    const separatorIndex = trimmedEntry.indexOf(':');
+    if (separatorIndex === -1) {
+      continue;
+    }
+
+    const name = trimmedEntry.slice(0, separatorIndex).trim();
+    const value = trimmedEntry.slice(separatorIndex + 1).trim();
+    if (!name) {
+      continue;
+    }
+
+    headers[name] = value;
+  }
+
+  return headers;
 }
